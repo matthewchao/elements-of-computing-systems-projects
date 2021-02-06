@@ -14,4 +14,8 @@ CHIP Xor {
 
     PARTS:
     // Put your code here:
+    // (Idea: 1 where Nand and Or agree)
+    Nand(a=a,b=b,out=nand);
+    Or(a=a,b=b,out=or);
+    And(a=nand,b=or,out=out);
 }
