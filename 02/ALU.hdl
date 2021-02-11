@@ -39,8 +39,33 @@ CHIP ALU {
     OUT 
         out[16], // 16-bit output
         zr, // 1 if (out == 0), 0 otherwise
-        ng; // 1 if (out < 0),  0 otherwise
+        ng; // 	1 if (out < 0),  0 otherwise
 
     PARTS:
-   // Put you code here:
+    
+    // Get the actual X and actual Y after taking into account zx, nx, zy, ny
+    Not16(in=x,out=notX);
+    Mux4Way16(a=x,b=notX,c=false,d=true,sel[0]=nx,sel[1]=zx,out=actualX);
+    Not16(in=y,out=notY);
+    Mux4Way16(a=y,b=notY,c=false,d=true,sel[0]=ny,sel[1]=zy,out=actualY);
+    
+    // Get the result of AND (or SUM) depending on f
+    Add16(a=actualX,b=actualY,out=sum);
+    And16(a=actualX,b=actualY,out=and);
+    Mux16(a=and,b=sum,sel=f,out=unnegatedOut);
+    
+    // Decide between the unnegated version and the negated version of out;
+    // Extract the MSB as ng;
+    // and prepare internal bus for the zr computation
+    Not16(in=unnegatedOut,out=negatedOut);
+    Mux16(a=unnegatedOut,b=negatedOut,sel=no,out=out,out[0..7]=actualOut1,out[8..15]=actualOut2,out[15]=ng);
+    
+    
+    // Compute zr; lack of Or16Way means we can use two 8-ways
+    Or8Way(in=actualOut1,out=anyOnes1);
+    Or8Way(in=actualOut2,out=anyOnes2);
+    //the output is zero iff both anyOnes1 and anyOnes2 are 0
+    Or(a=anyOnes1,b=anyOnes2,out=anyOnes);
+    Not(in=anyOnes,out=zr);
+    
 }
