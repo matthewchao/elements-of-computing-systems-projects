@@ -16,4 +16,19 @@ CHIP RAM64 {
 
     PARTS:
     // Put your code here:
+    //Use 3 bits of address to decide which RAM8 to use -- call that  "r"
+    //Use remaining 3 bits to decide where in that RAM8 to access
+    DMux8Way(in=load, sel=address[3..5],
+    a=load0,b=load1,c=load2,d=load3,
+    e=load4,f=load5,g=load6,h=load7);
+    RAM8(load=load0,in=in,address=address[0..2],out=ramOut0);
+    RAM8(load=load1,in=in,address=address[0..2],out=ramOut1);
+    RAM8(load=load2,in=in,address=address[0..2],out=ramOut2);
+    RAM8(load=load3,in=in,address=address[0..2],out=ramOut3);
+    RAM8(load=load4,in=in,address=address[0..2],out=ramOut4);
+    RAM8(load=load5,in=in,address=address[0..2],out=ramOut5);
+    RAM8(load=load6,in=in,address=address[0..2],out=ramOut6);
+    RAM8(load=load7,in=in,address=address[0..2],out=ramOut7);
+    Mux8Way16(sel=address[3..5],a=ramOut0,b=ramOut1,c=ramOut2,d=ramOut3,
+    e=ramOut4,f=ramOut5,g=ramOut6,h=ramOut7,out=out);
 }
