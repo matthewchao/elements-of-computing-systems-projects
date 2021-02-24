@@ -14,25 +14,144 @@
 // Put your code here.
 
 
-// Scans the keyboard address for anything nonzero
 
-// Ram[0] = 0 if on the last scan, there were no keys pressed
-// Ram[0] = 1 if on the last scan, there WAS a key pressed
-// Ram[1] equals the status that we are changing to
 
+
+// Ram[0] = the state = 0 or 1
+// 0 means no key pressed, 1 means key press
+// Ram[1] will be used to hold the next state
+
+
+//Initialize constants:
+@0
+D=A;
+D=D-1; //D = -1 in 2s complement notation
+@ALL_ONES
+M=D;
+
+//Initialize state R[0]:=0 where things start out unfilled
+@0
+M=0;
 
 
 (SCAN)
-// Checks if the status R0 should change
-// Jump to SCAN again if the status hasn't changed
-// Otherwise set the status (either Ram[0] = 0 or Ram[0]=1)
-// If Ram[0]=0, then Jump to the Unfill routine
-// Otherwise proceed to the Fill routine
+// Checks for a state change
 
-(FILL)
-// Fill the screen
-// Jump to SCAN
+    @KBD
+    D=M;
 
-(UNFILL)
-// Clear the screen
-// Jump to SCAN
+    @1
+    M=0;
+    
+    @COMPARE
+    D;JEQ
+
+    @1
+    M=1;
+
+
+    (COMPARE)
+    //D = currState-nextState
+    @0
+    D=M;
+    @1
+    D=D-M;
+
+    //IF the current and prev states coincide,
+    //then no change: scan again
+    @SCAN
+    D;JEQ
+    //ELSE: The states differ;
+    //Update R[0] and proceed to the FILL routine
+    @1
+    D=M;
+    @0
+    M=D;
+
+
+    (FILL)
+    // outer loop initialization
+    @i
+    M=0;
+    @offset1 //offset1 helps us more easily compute the addresses of the words we color
+    M=0;
+    @2 //2 will hold the value that we assign words to
+    M=0;
+    
+    //IF state = 0, then proceed to the beginning of the loop (since we already set R[2]=0)
+    @0
+    D=M;
+    @OUTER_LOOP
+    D;JEQ
+    //ELSE, set R[2]="11..111"
+    @ALL_ONES
+    D=M;
+    @2
+    M=D;
+
+
+    (OUTER_LOOP)
+    @i
+    D=M;
+    @256
+    D=D-A; //Sets D = i-256
+    @OUTER_END
+    D;JEQ //If i==0, terminate.
+
+
+        // BEGIN THE INNER LOOP
+        //fill a row; 
+        @j
+        M=0;
+
+        (INNER_LOOP)
+        //termination; after 32 words are done
+        @32
+        D=A;
+        @j
+        D=M-D;
+        @INNER_END
+        D;JEQ //if j-32, terminate
+
+
+        @SCREEN
+        D=A;
+        @idx
+        M=D;
+        @offset1
+        D=M;
+        @idx
+        M=D+M; //idx = idx+offset1
+        @j
+        D=M;
+        @idx
+        M=D+M; //idx = SCREEN+offset1+j, the index we will color
+
+        @2
+        D=M;
+        @idx
+        A=M;
+        M=D; //set this word of this row equal to 32767
+
+        // inner loop incrementation
+        @j
+        M=M+1;
+        @INNER_LOOP
+        0;JMP
+
+        (INNER_END)
+
+    // outer loop incrementation
+    @i
+    M=M+1;
+    @32
+    D=A;
+    @offset1
+    M=D+M; // offset1 increased by 32
+    @OUTER_LOOP
+    0;JMP
+
+    (OUTER_END)    
+    
+@SCAN
+0;JMP
