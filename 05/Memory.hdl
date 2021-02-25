@@ -27,5 +27,27 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    // Put your code here    
+
+    DMux(in=load,sel=address[14],a=load0,b=load1);
+    //address[14]=0 means access the RAM16K
+    //address[14]=1 means access the screen or keyboard
+    RAM16K(in=in,load=load0,address=address[0..13],out=ramOut);
+
+    // (16K = 2^4*2^10=2^14)
+    //1111 1111 1111 110 is the last RAM address? (little-endian)
+    //0000 0000 0000 001 (= 2^14) is the first screen address
+    // (8K = 2^3*2^10 = 2^13 screen addresses)
+    //1111 1111 1111 101 is the last screen address
+    //0000 0000 0000 011 is the keyboard address
+    //So we can distinguish between screen/keyboard with address[13]
+    
+    DMux(in=load1,sel=address[13],a=loadScreen);
+    Screen(load=loadScreen,in=in,address=address[0..12], out=screenOut);    
+    Keyboard(out=keyOut);
+    //ioOut equals either screenOut or keyOut
+    Mux16(a=screenOut,b=keyOut,sel=address[13],out=ioOut);
+    Mux16(a=ramOut,b=ioOut,sel=address[14],out=out);
+    
+    
 }
