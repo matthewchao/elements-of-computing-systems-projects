@@ -31,7 +31,7 @@
 CHIP CPU {
 
     IN  inM[16],         // M value input  (M = contents of RAM[A])
-        instruction[16], // Instruction for execution
+        instruction[16], // Instruction for execution;  111a cccc ccdd djjj for C-instruction
         reset;           // Signals whether to re-start the current
                          // program (reset==1) or continue executing
                          // the current program (reset==0).
@@ -43,4 +43,17 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+    
+    //the first input is D
+    //
+    ALU(x=D,y=AorM,
+    //Observation 1: c1 = "ignore D"
+    zx=instructions[4],
+    //Observation 2: c3 = "ignore A"
+    zy=instructions[6],
+    //Observations 3, 4, 5: c2, c4, c6 = negate the x, negate the y, negate the output respectively
+    
+    //Observation 6: c5 = "do an addition"
+
+    
 }
