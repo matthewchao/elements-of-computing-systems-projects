@@ -49,11 +49,11 @@ CHIP CPU {
     ALU(x=D,y=AorM,
     //Observation 1: c1 = "ignore D"
     zx=instructions[4],
-    //Observation 2: c3 = "ignore A"
+    //Observation 2: c3 = "ignore AorM"
     zy=instructions[6],
     //Observations 3, 4, 5: c2, c4, c6 = negate the x, negate the y, negate the output respectively
     
-    //Observation 6: c5 = "do an addition"
+    //Observation 6: c5 = "do an addition" (vs an AND)
 
     
 }
