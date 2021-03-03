@@ -44,16 +44,41 @@ CHIP CPU {
     PARTS:
     // Put your code here:
     
-    //the first input is D
-    //
+    Mux16(a=A,b=M,sel=instruction[3],out=AorM); // the "a" in 111a ... determines whether to use A (when a=0) or M (when a=1)
+
+
     ALU(x=D,y=AorM,
-    //Observation 1: c1 = "ignore D"
-    zx=instructions[4],
+    //Observation 1: c1 = "ignore D" (i.e. set it to 0)
+    zx=instruction[4],
     //Observation 2: c3 = "ignore AorM"
-    zy=instructions[6],
+    zy=instruction[6],
     //Observations 3, 4, 5: c2, c4, c6 = negate the x, negate the y, negate the output respectively
-    
+    nx=instruction[5],
+    ny=instruction[7],
+    no=instruction[9],
     //Observation 6: c5 = "do an addition" (vs an AND)
+    f=instruction[8],
+    out=outM,
+    zr=i2,
+    ng=i1);
+    
+
+    Or(a=i1,b=i2,out=i1ori2);
+    Not(in=i1ori2,out=i3);
+    
+    //jmp = whether to jump
+    //j1,j2,j3 are instruction[13..15]
+    And(a=i1,b=instruction[13],out=jmp1);
+    And(a=i2,b=instruction[14],out=jmp2);
+    And(a=i3,b=instruction[15],out=jmp3);
+    //Jump if jmp1 or jmp2 or jmp3
+    Or(a=jmp1,b=jmp2,out=jmp4);
+    Or(a=jmp4,b=jmp3,out=jmp);
+
+    
+    
+    //Set PC to A if jmp=true, otherwise increment.
+    PC(in=A,load=jmp,inc=true,reset=false,out[0..14]=pc);
 
     
 }
