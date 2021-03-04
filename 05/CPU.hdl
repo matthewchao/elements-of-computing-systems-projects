@@ -79,20 +79,17 @@ CHIP CPU {
     //110111 = c1c2c3c4c5c6 = i[11]i[10]...i[6]
     //the computation (recall C-instruction is like 111a cccc ccdd djjj)
     ALU(x=D,y=AorM,
-    //Observation 1: c1 = "ignore D" (i.e. set it to 0)
+
     zx=instruction[11],
-    //Observation 2: c3 = "ignore AorM"
-    zy=instruction[9],
-    //Observations 3, 4, 5: c2, c4, c6 = negate the x, negate the y, negate the output respectively
     nx=instruction[10],
+    zy=instruction[9],
     ny=instruction[8],
+    f=instruction[7],
     no=instruction[6],
-    //Observation 6: c5 = "do an addition" (vs an AND)
     //bitwise negation of 0 is like -1;
     //bitwise negation of A is like 2^N-(A+1) = -(A+1);
     //Then Addition with -1 is -1-(A+1) = -2-A
     //Then negation of output is A+2 = WRONG HERE! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    f=instruction[7],
     out=outM,
     out=aluOut,
     zr=i2,
@@ -115,17 +112,17 @@ CHIP CPU {
     
     //jmp = whether to jump
     //i1,i2,i3 are negative, zero, or positive computation results
-    //j1,j2,j3 are instruction[13..15], are the jump conditions
+    //j1,j2,j3 are instruction[2]instruction[1]instruction[0], are the jump conditions
     Or(a=i1,b=i2,out=i1ori2);
     Not(in=i1ori2,out=i3);
     
     And(a=i1,b=instruction[2],out=jmp1);
     And(a=i2,b=instruction[1],out=jmp2);
     And(a=i3,b=instruction[0],out=jmp3);
-    //Jump if jmp1 OR jmp2 OR jmp3
+    //Jump to A if jmp1 OR jmp2 OR jmp3
     Or(a=jmp1,b=jmp2,out=jmp4);
-    Or(a=jmp4,b=jmp3,out=jmp);
-
+    Or(a=jmp4,b=jmp3,out=jmp5);
+    And(a=jmp5,b=instruction[15],out=jmp); //only jump for C-instruction
     //Reset PC if reset=true; else set it to A if jmp=true; otherwise increment.
     PC(in=A,load=jmp,inc=true,reset=reset,out[0..14]=pc);
 
