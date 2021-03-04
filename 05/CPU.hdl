@@ -31,12 +31,12 @@
 CHIP CPU {
 
     IN  inM[16],         // M value input  (M = contents of RAM[A])
-        instruction[16], // Instruction for execution;  111a cccc ccdd djjj for C-instruction
+        instruction[16], // Instruction for execution;  111a cccc ccdd djjj for C-instruction, 0vvv vvvv vvvv vvvv for A-instruction
         reset;           // Signals whether to re-start the current
                          // program (reset==1) or continue executing
                          // the current program (reset==0).
 
-    OUT outM[16],        // M value output
+    OUT outM[16],        // M value output //i.e., the result of the computation
         writeM,          // Write to M? 
         addressM[15],    // Address in data memory (of M)
         pc[15];          // address of next instruction
@@ -44,41 +44,90 @@ CHIP CPU {
     PARTS:
     // Put your code here:
     
-    Mux16(a=A,b=M,sel=instruction[3],out=AorM); // the "a" in 111a ... determines whether to use A (when a=0) or M (when a=1)
+    ///////////////////////////////////////////////////////////////////////////
 
-
+    
+    ///////////////////////////////////////////////////////////////////
+    //Writing to D:
+    //we put the computation result into D if
+    //this is a C-instruction and if d2 (=instruction[4]) is true
+    And(a=instruction[15],b=instruction[4],out=loadNewD);
+    Register(in=aluOut, load=loadNewD, out=D);
+    //////////////////////////////////////////////////////////////////////
+    
+    
+    ////////////////////////////////////////////////////////////////////////
+    //Writing to A: 
+    //If the instruction is an A-instruction (i.e. has form 0vvv vvvv vvvv vvvv) then we put the 15-bit value (vv..v) into the 15 least significant bits of A
+    //Else, if it is a C-instruction with d1=true, then we store the result in A
+    //otherwise, A remains unchanged 
+    
+    Not(in=instruction[15],out=isAInstruction);
+    
+    Mux16(a=aluOut, b=instruction, 
+    sel=isAInstruction, out=newAValue);
+    Or(a=isAInstruction,b=instruction[5],out=loadNewA); //instruction[5]=d1
+    
+    Register(in=newAValue, load=loadNewA, out[0..14]=addressM, out=A); //XXXXXXXX
+    
+    ///////////////////////////////////////////////////////////////////////
+    
+    
+    //////////////////////////////////////////////////////////////////////////
+    //Whether we are using A or the memory as the 2nd argument
+    Mux16(a=A, b=inM, sel=instruction[12], out=AorM); // the "a" in 111a ... determines whether to use A (when a=0) or M (when a=1)
+    //110111 = c1c2c3c4c5c6 = i[11]i[10]...i[6]
+    //the computation (recall C-instruction is like 111a cccc ccdd djjj)
     ALU(x=D,y=AorM,
     //Observation 1: c1 = "ignore D" (i.e. set it to 0)
-    zx=instruction[4],
+    zx=instruction[11],
     //Observation 2: c3 = "ignore AorM"
-    zy=instruction[6],
+    zy=instruction[9],
     //Observations 3, 4, 5: c2, c4, c6 = negate the x, negate the y, negate the output respectively
-    nx=instruction[5],
-    ny=instruction[7],
-    no=instruction[9],
+    nx=instruction[10],
+    ny=instruction[8],
+    no=instruction[6],
     //Observation 6: c5 = "do an addition" (vs an AND)
-    f=instruction[8],
+    //bitwise negation of 0 is like -1;
+    //bitwise negation of A is like 2^N-(A+1) = -(A+1);
+    //Then Addition with -1 is -1-(A+1) = -2-A
+    //Then negation of output is A+2 = WRONG HERE! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    f=instruction[7],
     out=outM,
+    out=aluOut,
     zr=i2,
     ng=i1);
+    //////////////////////////////////////////
     
+    
+    
+    ///////////////////////////////////////////////////////////
+    //WRITING THE RESULT TO MEMORY
 
+    //If C-instruction, and d3=true, then we set writeM=true (this tells the computer to put it into RAM[A]
+    And(a=instruction[3],b=instruction[15],out=writeM);
+
+    ///////////////////////////////////////////////////////////
+
+    
+    ///////////////////////////////////////////////////////////
+    //CHANGING PC///////
+    
+    //jmp = whether to jump
+    //i1,i2,i3 are negative, zero, or positive computation results
+    //j1,j2,j3 are instruction[13..15], are the jump conditions
     Or(a=i1,b=i2,out=i1ori2);
     Not(in=i1ori2,out=i3);
     
-    //jmp = whether to jump
-    //j1,j2,j3 are instruction[13..15]
-    And(a=i1,b=instruction[13],out=jmp1);
-    And(a=i2,b=instruction[14],out=jmp2);
-    And(a=i3,b=instruction[15],out=jmp3);
-    //Jump if jmp1 or jmp2 or jmp3
+    And(a=i1,b=instruction[2],out=jmp1);
+    And(a=i2,b=instruction[1],out=jmp2);
+    And(a=i3,b=instruction[0],out=jmp3);
+    //Jump if jmp1 OR jmp2 OR jmp3
     Or(a=jmp1,b=jmp2,out=jmp4);
     Or(a=jmp4,b=jmp3,out=jmp);
 
-    
-    
-    //Set PC to A if jmp=true, otherwise increment.
-    PC(in=A,load=jmp,inc=true,reset=false,out[0..14]=pc);
+    //Reset PC if reset=true; else set it to A if jmp=true; otherwise increment.
+    PC(in=A,load=jmp,inc=true,reset=reset,out[0..14]=pc);
 
     
 }
